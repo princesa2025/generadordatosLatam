@@ -1,48 +1,48 @@
 package model;
 
-/**
- * Clase abstracta Usuario
- * Aplica ABSTRACCIÓN: solo define lo común entre tipos de usuarios (PersonaNatural y Empresa).
- */
 public abstract class Usuario {
+    protected String tipo;
+    protected String nombre;
+    protected String apellido;
+    protected int edad;
+    protected String documento;
+    protected String pais;
+    protected String ciudad;
+    protected String idioma;
 
-    // Atributos encapsulados
-    private String nombre;
-    private String documento;
-    private String ciudad;
-    private String pais;
-    private String idioma;
+    // Constructor requerido por OpenCSV (usado por clases hijas como PersonaNatural)
+    protected Usuario() {
+        this.apellido = "";
+    }
 
-    // Constructor
-    public Usuario(String nombre, String documento, String ciudad, String pais, String idioma) {
+    public Usuario(String tipo, String nombre, int edad, String documento, String pais, String ciudad, String idioma) {
+        this.tipo = tipo;
         this.nombre = nombre;
+        this.edad = edad;
         this.documento = documento;
-        this.ciudad = ciudad;
         this.pais = pais;
+        this.ciudad = ciudad;
         this.idioma = idioma;
+        this.apellido = "";
     }
 
     // Getters
-    public String getNombre() {
-        return nombre;
-    }
+    public String getTipo() { return tipo; }
+    public String getNombre() { return nombre; }
+    public String getApellido() { return apellido; }
+    public int getEdad() { return edad; }
+    public String getDocumento() { return documento; }
+    public String getPais() { return pais; }
+    public String getCiudad() { return ciudad; }
+    public String getIdioma() { return idioma; }
 
-    public String getDocumento() {
-        return documento;
-    }
-
-    public String getCiudad() {
-        return ciudad;
-    }
-
-    public String getPais() {
-        return pais;
-    }
-
-    public String getIdioma() {
-        return idioma;
-    }
-
-    // Método polimórfico que será sobrescrito en las subclases
-    public abstract String getTipo();
+    // Setters necesarios para OpenCSV
+    public void setTipo(String tipo) { this.tipo = tipo; }
+    public void setNombre(String nombre) { this.nombre = nombre; }
+    public void setApellido(String apellido) { this.apellido = apellido; }
+    public void setEdad(int edad) { this.edad = edad; }
+    public void setDocumento(String documento) { this.documento = documento; }
+    public void setPais(String pais) { this.pais = pais; }
+    public void setCiudad(String ciudad) { this.ciudad = ciudad; }
+    public void setIdioma(String idioma) { this.idioma = idioma; }
 }

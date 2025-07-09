@@ -1,36 +1,76 @@
 package model;
 
-/**
- * Clase PersonaNatural
- * Aplica HERENCIA desde Usuario.
- * Aplica POLIMORFISMO sobrescribiendo el método getTipo().
- */
+import com.opencsv.bean.CsvBindByName;
+
+import java.util.HashSet;
+import java.util.Set;
+
 public class PersonaNatural extends Usuario {
 
-    private int edad;
+    private static final Set<String> combinacionesNombreApellido = new HashSet<>();
+    private static final Set<String> documentosRegistrados = new HashSet<>();
 
-    // Constructor
-    public PersonaNatural(String nombre, String apellido, int edad, String documento,
-                          String ciudad, String pais, String idioma) {
+    @CsvBindByName(column = "Apellido")
+    private String apellido;
 
-        // Concatenamos nombre completo
-        super(nombre + " " + apellido, documento, ciudad, pais, idioma);
+    public PersonaNatural() {
+        // Constructor sin argumentos requerido por OpenCSV
+        super();
+    }
 
-        if (edad < 10 || edad >= 80) {
-            throw new IllegalArgumentException("Edad inválida: debe estar entre 10 y 80 años");
+    public PersonaNatural(String nombre, String apellido, int edad, String pais, String ciudad, String documento, String idioma) {
+        super("PersonaNatural", nombre, edad, documento, pais, ciudad, idioma);
+        this.apellido = apellido;
+
+        validarNombreApellidoUnicos(nombre, apellido);
+        validarEdad(edad);
+        validarDocumento(documento, edad);
+        validarIdioma(pais, idioma);
+    }
+
+    private void validarNombreApellidoUnicos(String nombre, String apellido) {
+        String combinacion = (nombre + "|" + apellido).toLowerCase();
+        if (!combinacionesNombreApellido.add(combinacion)) {
+            throw new IllegalArgumentException("La combinación de nombre y apellido ya fue registrada.");
+        }
+    }
+
+    private void validarEdad(int edad) {
+        if (edad < 10 || edad > 80) {
+            throw new IllegalArgumentException("La edad debe estar entre 10 y 80 años.");
+        }
+    }
+
+    private void validarDocumento(String documento, int edad) {
+        if (!documento.matches("\\d+")) {
+            throw new IllegalArgumentException("El documento debe ser numérico.");
         }
 
-        this.edad = edad;
+        if (edad < 18 && !documento.startsWith("11")) {
+            throw new IllegalArgumentException("El documento de un menor debe comenzar por '11'.");
+        }
+
+        if (edad >= 18 && (documento.length() < 9 || documento.length() > 11)) {
+            throw new IllegalArgumentException("El documento de un adulto debe tener entre 9 y 11 dígitos.");
+        }
+
+        if (!documentosRegistrados.add(documento)) {
+            throw new IllegalArgumentException("El documento ya ha sido registrado previamente.");
+        }
     }
 
-    // Getter
-    public int getEdad() {
-        return edad;
+    private void validarIdioma(String pais, String idioma) {
+        if (!pais.equalsIgnoreCase("Colombia") && idioma.equalsIgnoreCase("Español")) {
+            throw new IllegalArgumentException("Solo se permite idioma Español si el país es Colombia.");
+        }
     }
 
-    // Sobrescribimos método abstracto de Usuario
-    @Override
-    public String getTipo() {
-        return "Persona Natural";
+    // GETTERS Y SETTERS REQUERIDOS POR OpenCSV
+    public String getApellido() {
+        return apellido;
+    }
+
+    public void setApellido(String apellido) {
+        this.apellido = apellido;
     }
 }

@@ -1,41 +1,59 @@
 package output;
 
 import model.Usuario;
+import model.PersonaNatural;
+import utils.CsvLoader;
+import java.util.stream.Collectors;
 
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
+import java.util.Random;
 
-/**
- * CLASE: CsvExporter
- *
- * Exporta una lista de usuarios a un archivo CSV.
- * Cumple con el requisito 6 de la prueba técnica.
- */
 public class CsvExporter {
 
-    // MÉTODO: Exporta la lista al archivo CSV
-    public static void exportarUsuariosCSV(List<Usuario> usuarios, String nombreArchivo) {
+    public static void exportar(List<? extends Usuario> listaUsuarios, String nombreArchivo) {
         try (FileWriter writer = new FileWriter(nombreArchivo)) {
-
             // Escribir encabezados
-            writer.append("Nombre,Documento,Ciudad,Pais,Idioma,Tipo\n");
+            writer.append("Nombre,Apellido,Edad,Documento,Pais,Ciudad,Idioma\n");
 
-            // Escribir datos de cada usuario
-            for (Usuario u : usuarios) {
-                writer.append(u.getNombre()).append(",");
-                writer.append(u.getDocumento()).append(",");
-                writer.append(u.getCiudad()).append(",");
-                writer.append(u.getPais()).append(",");
-                writer.append(u.getIdioma()).append(",");
-                writer.append(u.getTipo()).append("\n");
+            // Escribir datos
+            for (Usuario usuario : listaUsuarios) {
+                writer.append(usuario.getNombre()).append(",")
+                        .append(usuario.getApellido()).append(",")
+                        .append(String.valueOf(usuario.getEdad())).append(",")
+                        .append(usuario.getDocumento()).append(",")
+                        .append(usuario.getPais()).append(",")
+                        .append(usuario.getCiudad()).append(",")
+                        .append(usuario.getIdioma()).append("\n");
             }
 
-            System.out.println("Archivo CSV generado exitosamente: " + nombreArchivo);
-
+            writer.flush();
         } catch (IOException e) {
-            System.err.println("Error al generar el archivo CSV: " + e.getMessage());
+            e.printStackTrace();
         }
     }
-}
 
+    public static void eliminarCsvSiExiste(String nombreArchivo) {
+        java.io.File archivo = new java.io.File(nombreArchivo);
+        if (archivo.exists()) {
+            archivo.delete();
+        }
+    }
+    public static PersonaNatural obtenerPersonaNaturalAleatoria(String rutaCsv) {
+        List<Usuario> usuarios = CsvLoader.cargarUsuariosDesdeCSV(rutaCsv);
+
+        // Filtrar solo PersonaNatural
+        List<PersonaNatural> personasNaturales = usuarios.stream()
+                .filter(u -> u instanceof PersonaNatural)
+                .map(u -> (PersonaNatural) u)
+                .collect(Collectors.toList());
+
+        if (!personasNaturales.isEmpty()) {
+            return personasNaturales.get(new Random().nextInt(personasNaturales.size()));
+        }
+
+        System.err.println("No se encontraron personas naturales en el archivo CSV.");
+        return null;
+    }
+}

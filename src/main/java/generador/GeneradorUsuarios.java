@@ -1,110 +1,83 @@
-package generator;
+package generador;
 
 import com.github.javafaker.Faker;
-import model.Empresa;
 import model.PersonaNatural;
 import model.Usuario;
+import output.CsvExporter;
+import utils.CsvLoader;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Random;
+import java.util.stream.Collectors;
 
-/**
- * CLASE: GeneradorUsuarios
- *
- * Genera usuarios (empresa o persona natural) válidos para LATAM.
- * Aplica reglas de negocio, validaciones, y evita duplicados.
- */
 public class GeneradorUsuarios {
 
-    private final Faker faker = new Faker(new Locale("es"));
+    private static final String ARCHIVO_CSV = "target/usuarios_latam.csv";
+    private static final String[] PAISES_LATAM = {
+            "Colombia", "Argentina", "Perú", "Chile", "Ecuador",
+            "México", "Uruguay", "Bolivia", "Paraguay", "Venezuela"
+    };
 
-    // Conjuntos para evitar duplicados
-    private final Set<String> combinacionesNombre = new HashSet<>();
-    private final Set<String> documentosGenerados = new HashSet<>();
+    private static final String[] CIUDADES_COLOMBIA = {
+            "Bogotá", "Medellín", "Cali", "Barranquilla", "Bucaramanga"
+    };
 
-    // Listado de países e idiomas asociados
-    private final List<String> paises = Arrays.asList("Colombia", "Perú", "Ecuador", "Brasil", "Chile", "Argentina");
-    private final Map<String, String> idiomas = Map.of(
-            "Colombia", "Español",
-            "Perú", "Quechua",
-            "Ecuador", "Quichua",
-            "Brasil", "Portugués",
-            "Chile", "Español Chileno",
-            "Argentina", "Español Rioplatense"
-    );
-
-    // MÉTODO PRINCIPAL: genera una lista de usuarios
-    public List<Usuario> generarUsuarios(int cantidad) {
-        List<Usuario> usuarios = new ArrayList<>();
+    public static List<Usuario> generarUsuarios(int cantidad) {
+        Faker faker = new Faker(new Locale("es"));
         Random random = new Random();
+        List<Usuario> usuarios = new ArrayList<>();
 
-        while (usuarios.size() < cantidad) {
-            boolean esEmpresa = random.nextBoolean();
-            String pais = paises.get(random.nextInt(paises.size()));
-            String ciudad = faker.address().cityName();
-            String idioma = idiomas.getOrDefault(pais, "Español");
+        for (int i = 0; i < cantidad; i++) {
+            String pais = PAISES_LATAM[random.nextInt(PAISES_LATAM.length)];
+            String ciudad = pais.equals("Colombia") ?
+                    CIUDADES_COLOMBIA[random.nextInt(CIUDADES_COLOMBIA.length)] :
+                    faker.address().cityName();
 
-            Usuario nuevo;
+            String nombre = faker.name().firstName();
+            String apellido = faker.name().lastName();
+            int edad = 10 + random.nextInt(71); // entre 10 y 80 años
 
-            if (esEmpresa) {
-                nuevo = generarEmpresa(ciudad, pais, idioma);
-            } else {
-                nuevo = generarPersona(ciudad, pais, idioma);
-            }
+            String documento = edad < 18
+                    ? "11" + faker.number().digits(7)
+                    : faker.number().digits(9);
 
-            if (nuevo != null) {
-                usuarios.add(nuevo);
+            String idioma = "Español";
+
+            try {
+                PersonaNatural persona = new PersonaNatural(nombre, apellido, edad, pais, ciudad, documento, idioma);
+                usuarios.add(persona);
+            } catch (IllegalArgumentException e) {
+                // Saltar usuarios no válidos (combinación repetida o restricciones de negocio)
+                i--; // Intentar de nuevo
             }
         }
+
+        // Eliminar archivo anterior
+        CsvExporter.eliminarCsvSiExiste(ARCHIVO_CSV);
+
+        // Exportar
+        CsvExporter.exportar(usuarios, ARCHIVO_CSV);
 
         return usuarios;
     }
 
-    // FACTORY: Genera un usuario tipo persona natural
-    private Usuario generarPersona(String ciudad, String pais, String idioma) {
-        Random random = new Random();
-
-        String nombre = faker.name().firstName();
-        String apellido = faker.name().lastName();
-        String combinacion = nombre + "-" + apellido;
-
-        // Validar combinación única
-        if (!combinacionesNombre.add(combinacion)) return null;
-
-        int edad = 10 + random.nextInt(71); // entre 10 y 80
-
-        String documento;
-        do {
-            if (edad < 18) {
-                documento = "11" + (100000 + random.nextInt(900000)); // menor de edad
-            } else {
-                documento = String.valueOf(100000000 + random.nextInt(900000000)); // adulto
-            }
-        } while (!documentosGenerados.add(documento)); // evitar duplicado
-
-        try {
-            return new PersonaNatural(nombre, apellido, edad, documento, ciudad, pais, idioma);
-        } catch (IllegalArgumentException e) {
-            return null;
+    public static PersonaNatural obtenerPersonaNaturalAleatoria(String rutaCsv) {
+        List<PersonaNatural> personas = cargarPersonasDesdeCSV(rutaCsv);
+        if (personas.isEmpty()) {
+            throw new IllegalStateException("El archivo CSV no contiene personas naturales válidas.");
         }
+        Random random = new Random();
+        return personas.get(random.nextInt(personas.size()));
     }
 
-    // FACTORY: Genera un usuario tipo empresa
-    private Usuario generarEmpresa(String ciudad, String pais, String idioma) {
-        String nombreEmpresa = faker.company().name();
+    public static List<PersonaNatural> cargarPersonasDesdeCSV(String rutaCsv) {
+        List<Usuario> usuarios = CsvLoader.cargarUsuariosDesdeCSV(rutaCsv);
 
-        // Validar nombre no duplicado
-        if (!combinacionesNombre.add(nombreEmpresa)) return null;
-
-        Random random = new Random();
-        String documento;
-        do {
-            documento = "9" + (10000000 + random.nextInt(90000000)); // Documento de empresa
-        } while (!documentosGenerados.add(documento)); // evitar duplicado
-
-        try {
-            return new Empresa(nombreEmpresa, documento, ciudad, pais, idioma);
-        } catch (IllegalArgumentException e) {
-            return null;
-        }
+        return usuarios.stream()
+                .filter(u -> u instanceof PersonaNatural)
+                .map(u -> (PersonaNatural) u)
+                .collect(Collectors.toList());
     }
 }
